@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lanxi-蓝希 管理后台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background: linear-gradient(135deg, #0c1220 0%, #1a2744 50%, #0f1a2e 100%);
+            color: #fff; 
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .tabs { 
+            display: flex; gap: 10px; padding: 20px; 
+            background: rgba(15, 26, 46, 0.8); 
+            border-bottom: 1px solid rgba(58, 123, 213, 0.3); 
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .tab { 
+            padding: 10px 20px; border-radius: 8px; 
+            background: rgba(30, 58, 95, 0.5); 
+            cursor: pointer; border: 1px solid rgba(58, 123, 213, 0.3); 
+            color: #fff; transition: all 0.3s ease;
+        }
+        .tab:hover { background: rgba(58, 123, 213, 0.3); transform: translateY(-2px); }
+        .tab.active { 
+            background: linear-gradient(135deg, #3a7bd5, #5c9cf5); 
+            border-color: transparent; 
+            box-shadow: 0 4px 15px rgba(58, 123, 213, 0.4);
+        }
+        .panel { display: none; padding: 20px; max-width: 1400px; margin: 0 auto; }
+        .panel.active { display: block; animation: fadeInUp 0.5s ease; }
+        
+        .stats-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: rgba(15, 26, 46, 0.6);
+            border-radius: 16px;
+            padding: 25px;
+            border: 1px solid rgba(58, 123, 213, 0.2);
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 36px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #5c9cf5, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .stat-label {
+            color: #8ab4f8;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+        
+        .admin-form { 
+            background: rgba(15, 26, 46, 0.6); 
+            padding: 30px; border-radius: 16px; 
+            margin-bottom: 30px; 
+            border: 1px solid rgba(58, 123, 213, 0.2); 
+            backdrop-filter: blur(10px);
+        }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; color: #8ab4f8; font-weight: 500; }
+        .form-group input, .form-group textarea {
+            width: 100%; padding: 12px; border: 1px solid rgba(58, 123, 213, 0.3); 
+            border-radius: 8px; background: rgba(12, 18, 32, 0.8); 
+            color: #fff; font-size: 14px; transition: all 0.3s ease;
+        }
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none; border-color: #3a7bd5; box-shadow: 0 0 15px rgba(58, 123, 213, 0.4);
+        }
+        .btn-primary {
+            padding: 12px 30px; background: linear-gradient(135deg, #3a7bd5, #5c9cf5); 
+            color: #fff; border: none; border-radius: 8px; cursor: pointer; 
+            font-size: 16px; transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(58, 123, 213, 0.3);
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(58, 123, 213, 0.5); }
+        .btn-secondary {
+            padding: 8px 16px; background: rgba(58, 123, 213, 0.2);
+            color: #8ab4f8; border: 1px solid rgba(58, 123, 213, 0.4);
+            border-radius: 6px; cursor: pointer; font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        .btn-secondary:hover { background: rgba(58, 123, 213, 0.4); color: #fff; }
+        .btn-danger {
+            padding: 8px 16px; background: linear-gradient(135deg, #e74c3c, #c0392b); 
+            color: #fff; border: none; border-radius: 6px; cursor: pointer; 
+            font-size: 14px; transition: all 0.3s ease;
+        }
+        
+        .wallpaper-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
+        .wallpaper-card {
+            background: rgba(15, 26, 46, 0.6); border-radius: 16px; overflow: hidden;
+            border: 1px solid rgba(58, 123, 213, 0.2); transition: all 0.4s ease;
+        }
+        .wallpaper-card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(58, 123, 213, 0.3); }
+        .wallpaper-card img { width: 100%; height: 200px; object-fit: cover; }
+        .wallpaper-card .info { padding: 15px; }
+        .wallpaper-card .stats { 
+            display: flex; gap: 15px; padding: 0 15px 10px; 
+            font-size: 12px; color: #8ab4f8;
+        }
+        .wallpaper-card .actions { padding: 0 15px 15px; display: flex; gap: 10px; flex-wrap: wrap; }
+        
+        .edit-modal {
+            display: none; position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%; background: rgba(8, 12, 24, 0.95);
+            z-index: 1000; justify-content: center; align-items: center;
+            backdrop-filter: blur(20px);
+        }
+        .edit-modal.active { display: flex; }
+        .edit-form {
+            background: rgba(15, 26, 46, 0.9);
+            border-radius: 20px; padding: 40px;
+            max-width: 500px; width: 90%;
+            border: 1px solid rgba(58, 123, 213, 0.3);
+        }
+        .edit-form h3 {
+            color: #5c9cf5; margin-bottom: 25px; font-size: 22px;
+        }
+        
+        .preview-link {
+            background: rgba(15, 26, 46, 0.6);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(58, 123, 213, 0.2);
+        }
+        .preview-link h3 { color: #5c9cf5; margin-bottom: 10px; }
+        .preview-link code {
+            background: rgba(12, 18, 32, 0.8);
+            padding: 10px;
+            border-radius: 6px;
+            display: block;
+            word-break: break-all;
+            color: #8ab4f8;
+        }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #3a7bd5; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('admin')">🎨 壁纸管理</button>
+        <button class="tab" onclick="switchTab('stats')">📊 数据统计</button>
+        <button class="tab" onclick="switchTab('link')">🔗 预览链接</button>
+    </div>
+
+    <!-- 管理页面 -->
+    <div id="admin" class="panel active">
+        <div class="admin-form">
+            <h2 style="margin-bottom: 20px; color: #5c9cf5;">添加新壁纸</h2>
+            <div class="form-group">
+                <label>图片URL</label>
+                <input type="text" id="imgUrl" placeholder="https://example.com/image.jpg">
+            </div>
+            <div class="form-group">
+                <label>标题</label>
+                <input type="text" id="imgText" placeholder="输入壁纸标题...">
+            </div>
+            <div class="form-group">
+                <label>说明文字（用于详情页）</label>
+                <textarea id="imgDesc" placeholder="输入详细描述..."></textarea>
+            </div>
+            <button class="btn-primary" onclick="addWallpaper()">添加壁纸</button>
+        </div>
+
+        <h2 style="margin-bottom: 20px; color: #5c9cf5;">已上传壁纸</h2>
+        <div id="adminList" class="wallpaper-list"></div>
+    </div>
+
+    <!-- 统计页面 -->
+    <div id="stats" class="panel">
+        <div class="stats-panel">
+            <div class="stat-card">
+                <div class="stat-number" id="totalViews">0</div>
+                <div class="stat-label">总浏览次数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalDownloads">0</div>
+                <div class="stat-label">总下载次数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="wallpaperCount">0</div>
+                <div class="stat-label">壁纸数量</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 链接页面 -->
+    <div id="link" class="panel">
+        <div class="preview-link">
+            <h3>展示页面链接（给用户看的）</h3>
+            <code id="publicUrl">加载中...</code>
+        </div>
+        <div class="preview-link">
+            <h3>管理后台链接（仅你自己使用）</h3>
+            <code id="adminUrl">加载中...</code>
+        </div>
+    </div>
+
+    <!-- 编辑弹窗 -->
+    <div class="edit-modal" id="editModal">
+        <div class="edit-form">
+            <h3>✏️ 编辑壁纸信息</h3>
+            <div class="form-group">
+                <label>标题</label>
+                <input type="text" id="editTitle">
+            </div>
+            <div class="form-group">
+                <label>说明文字</label>
+                <textarea id="editDesc" rows="4"></textarea>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn-secondary" onclick="closeEdit()">取消</button>
+                <button class="btn-primary" onclick="saveEdit()">保存修改</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let wallpapers = [];
+        let stats = { views: 0, downloads: 0 };
+        let editingId = null;
+
+        async function init() {
+            await loadData();
+            renderAdmin();
+            initStats();
+            initLinks();
+        }
+
+        async function loadData() {
+            try {
+                const res = await fetch('/api/wallpapers');
+                wallpapers = await res.json();
+                const statsRes = await fetch('/api/stats');
+                stats = await statsRes.json();
+            } catch (e) {
+                console.error('Failed to load data', e);
+            }
+        }
+
+        function initStats() {
+            document.getElementById('totalViews').textContent = stats.views;
+            document.getElementById('totalDownloads').textContent = stats.downloads;
+            document.getElementById('wallpaperCount').textContent = wallpapers.length;
+        }
+
+        function initLinks() {
+            const baseUrl = window.location.origin;
+            document.getElementById('publicUrl').textContent = baseUrl + '/';
+            document.getElementById('adminUrl').textContent = baseUrl + '/admin';
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tab).classList.add('active');
+        }
+
+        async function addWallpaper() {
+            const url = document.getElementById('imgUrl').value.trim();
+            const text = document.getElementById('imgText').value.trim();
+            const desc = document.getElementById('imgDesc').value.trim() || '高清精美壁纸，支持手机和电脑使用';
+            if (!url || !text) { alert('请填写图片URL和标题'); return; }
+            
+            try {
+                const res = await fetch('/api/wallpapers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, text, desc })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    alert('上传失败：' + (err.error || res.statusText));
+                    return;
+                }
+                // 成功才清空
+                document.getElementById('imgUrl').value = '';
+                document.getElementById('imgText').value = '';
+                document.getElementById('imgDesc').value = '';
+                await loadData();
+                renderAdmin();
+                initStats();
+                alert('✅ 壁纸添加成功！');
+            } catch (e) {
+                alert('上传失败：网络错误，请检查控制台');
+                console.error(e);
+            }
+        }
+
+        async function deleteWallpaper(id) {
+            if (!confirm('确定要删除这张壁纸吗？')) return;
+            try {
+                const res = await fetch(`/api/wallpapers/${id}`, { method: 'DELETE' });
+                if (!res.ok) { alert('删除失败'); return; }
+                await loadData();
+                renderAdmin();
+                initStats();
+            } catch (e) { alert('删除失败：网络错误'); }
+        }
+
+        function openEdit(id) {
+            const wallpaper = wallpapers.find(w => w.id === id);
+            if (!wallpaper) return;
+            editingId = id;
+            document.getElementById('editTitle').value = wallpaper.text;
+            document.getElementById('editDesc').value = wallpaper.desc || '';
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        function closeEdit() {
+            document.getElementById('editModal').classList.remove('active');
+            editingId = null;
+        }
+
+        async function saveEdit() {
+            if (!editingId) return;
+            try {
+                const res = await fetch(`/api/wallpapers/${editingId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: document.getElementById('editTitle').value,
+                        desc: document.getElementById('editDesc').value
+                    })
+                });
+                if (!res.ok) { alert('保存失败'); return; }
+                await loadData();
+                renderAdmin();
+                closeEdit();
+            } catch (e) { alert('保存失败：网络错误'); }
+        }
+
+        function renderAdmin() {
+            const list = document.getElementById('adminList');
+            if (wallpapers.length === 0) { 
+                list.innerHTML = '<p style="color: #8ab4f8; text-align: center;">暂无壁纸</p>'; 
+                return; 
+            }
+            list.innerHTML = wallpapers.map(w => {
+                const descText = w.desc || w.description || '';
+                return `
+                <div class="wallpaper-card">
+                    <img src="${w.url}" alt="${w.text}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22200%22><rect fill=%22%231a2744%22 width=%22300%22 height=%22200%22/><text fill=%22%238ab4f8%22 x=%22150%22 y=%22100%22 text-anchor=%22middle%22>图片加载失败</text></svg>'">
+                    <div class="info"><h4>${w.text}</h4><p style="color:#8ab4f8;font-size:12px;margin-top:4px;">${descText}</p></div>
+                    <div class="stats"><span>⬇️ ${w.downloads || 0} 次下载</span></div>
+                    <div class="actions">
+                        <button class="btn-secondary" onclick="openEdit(${w.id})">编辑</button>
+                        <button class="btn-danger" onclick="deleteWallpaper(${w.id})">删除</button>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        document.addEventListener('keydown', (e) => { 
+            if (e.key === 'Escape') closeEdit();
+        });
+
+        init();
+    </script>
+</body>
+</html>
