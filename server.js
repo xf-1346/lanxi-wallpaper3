@@ -1,6 +1,11 @@
 const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
+const http = require('http');
+const { URL } = require('url');
+let sharp = null;
+try { sharp = require('sharp'); } catch (e) { /* sharp not available */ }
 
 // ========== 环境变量诊断 ==========
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -206,6 +211,72 @@ async function updateStats(stats) {
 }
 
 // ========== API路由 ==========
+
+// ========== 图片缩略图代理 ==========
+// 无数据库/存储变更的纯代理压缩。浏览页用 `?w=400`，详情预览用 `?w=800`，下载始终取原 URL
+
+app.get('/api/thumb', async (req, res) => {
+    const imageUrl = req.query.url;
+    const width = parseInt(req.query.w) || 400;
+    
+    if (!imageUrl) {
+        return res.status(400).send('Missing url parameter');
+    }
+    
+    try {
+        const parsed = new URL(imageUrl);
+        const fetcher = parsed.protocol === 'https:' ? https : http;
+        
+        // 先尝试验证 URL 有效性
+        const response = await new Promise((resolve, reject) => {
+            const reqGet = fetcher.get(imageUrl, { timeout: 8000 }, (res) => {
+                if (res.statusCode >= 400) {
+                    // 拒绝坏链接
+                    reject(new Error('Remote server returned ' + res.statusCode));
+                    return;
+                }
+                resolve(res);
+            });
+            reqGet.on('error', reject);
+            reqGet.on('timeout', () => { reqGet.destroy(); reject(new Error('Request timeout')); });
+        });
+        
+        // 收集原图数据
+        const chunks = [];
+        for await (const chunk of response) {
+            chunks.push(chunk);
+        }
+        const buffer = Buffer.concat(chunks);
+        
+        // 浏览器强缓存：图片几乎不变，缓存 7 天
+        res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+        res.setHeader('CDN-Cache-Control', 'public, max-age=604800');
+        
+        if (sharp && buffer.length > 50000) {
+            // 用 sharp 压缩：转为 webp + 设定宽度 + 适度质量
+            const compressed = await sharp(buffer)
+                .resize({ width, withoutEnlargement: true })
+                .webp({ quality: 80 })
+                .toBuffer();
+            
+            res.setHeader('Content-Type', 'image/webp');
+            res.setHeader('X-Image-Original-Size', buffer.length);
+            res.setHeader('X-Image-Compressed-Size', compressed.length);
+            return res.send(compressed);
+        } else {
+            // 没有 sharp 或图片太小：原图直出
+            const contentType = response.headers['content-type'] || 'image/jpeg';
+            res.setHeader('Content-Type', contentType);
+            return res.send(buffer);
+        }
+    } catch (e) {
+        console.error('Image proxy error:', e.message);
+        // 代理失败，返回一个极小的占位图片（1x1 透明像素）
+        res.setHeader('Content-Type', 'image/gif');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.send(Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'));
+    }
+});
 
 // 调试端点 - 诊断环境变量
 app.get('/api/debug', (req, res) => {

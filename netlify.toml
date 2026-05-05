@@ -3,7 +3,7 @@
   functions = "netlify/functions"
 
 [functions]
-  node_bundler = "esbuild"
+  node_bundler = "nft"
   external_node_modules = ["express"]
   included_files = ["public/**"]
 
@@ -25,7 +25,7 @@
   to = "/.netlify/functions/api"
   status = 200
 
-# 静态文件直接服务（图片、HTML等）
+# 所有请求走 serverless function
 [[redirects]]
   from = "/*"
   to = "/.netlify/functions/api"

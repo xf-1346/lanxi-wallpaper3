@@ -204,16 +204,16 @@
             } catch (e) {}
         }
 
-        // 获取优化的缩略图URL — 使用 wsrv.nl 图片代理压缩（免费，支持任何图床）
+        // 获取优化的缩略图URL — 服务端 sharp 压缩，浏览器强缓存 7 天
         function getOptimizedUrl(url, type) {
             if (!url) return '';
             
             if (type === 'thumb') {
-                // 缩略图：用代理压缩到 400px，WebP格式，高质量
-                return `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=400&output=webp&q=75`;
+                // 缩略图 400px webp，约 20-50KB，超快加载
+                return `/api/thumb?url=${encodeURIComponent(url)}&w=400`;
             } else {
-                // 详情预览图：用代理压缩到 800px，WebP格式
-                return `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=800&output=webp&q=85`;
+                // 详情预览 800px webp，清晰且速度均衡
+                return `/api/thumb?url=${encodeURIComponent(url)}&w=800`;
             }
         }
 
