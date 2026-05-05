@@ -53,10 +53,11 @@ app.use((req, res, next) => {
 app.use((req, res, next) => {
     const url = req.originalUrl || req.url || '';
     if (url.startsWith('/admin')) {
-        const password = req.query.password || req.query.pwd || '';
+        const password = req.query.password || req.query.pwd || req.body?.password || '';
         if (password === ADMIN_PASSWORD) {
             try {
-                const adminPath = path.join(__dirname, 'admin-panel.html');
+                // 在 public/ 中查找 admin-panel.html（适配 Netlify 和本地开发）
+                const adminPath = path.join(getPublicPath(), 'admin-panel.html');
                 const adminHtml = fs.readFileSync(adminPath, 'utf8');
                 return res.send(adminHtml);
             } catch (e) {
@@ -269,11 +270,14 @@ app.post('/api/stats', async (req, res) => {
 // 辅助函数：查找public文件夹路径（适配不同部署环境）
 function getPublicPath() {
     const possiblePaths = [
+        path.join(__dirname, '..', '..', 'public'),  // Netlify: /var/task/netlify/functions -> /var/task/public
+        path.join(path.dirname(__dirname), 'public'),
         path.join(__dirname, 'public'),
         path.join(process.cwd(), 'public'),
         path.resolve('./public'),
         '/var/task/public',
         '/var/task/netlify/functions/public',
+        '/var/task/public',
     ];
     for (const p of possiblePaths) {
         if (fs.existsSync(p)) return p;

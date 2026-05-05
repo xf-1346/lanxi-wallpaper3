@@ -19,11 +19,13 @@
   to = "/.netlify/functions/api/:splat"
   status = 200
 
+# 后台路由：交给 serverless function 处理密码验证
 [[redirects]]
   from = "/admin"
   to = "/.netlify/functions/api"
   status = 200
 
+# 静态文件直接服务（图片、HTML等）
 [[redirects]]
   from = "/*"
   to = "/.netlify/functions/api"

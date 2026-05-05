@@ -204,54 +204,22 @@
             } catch (e) {}
         }
 
-        // 获取优化的缩略图URL - 支持多种图床和URL格式
+        // 获取优化的缩略图URL — 使用 wsrv.nl 图片代理压缩（免费，支持任何图床）
         function getOptimizedUrl(url, type) {
             if (!url) return '';
             
-            // 1. Imgur 多种URL格式支持
-            // i.imgur.com/xxxxx.jpg -> i.imgur.com/xxxxx{m|l|h}.jpg
-            // imgur.com/xxxxx -> i.imgur.com/xxxxx{m|l|h}.jpg (需要ID)
-            if (url.includes('imgur.com')) {
-                // 提取Imgur ID (5-7位字母数字)
-                const idMatch = url.match(/imgur\.com\/(?:gallery\/)?([a-zA-Z0-9]{5,7})(?:\.[a-z]+)?(?:\?.*)?$/);
-                if (idMatch) {
-                    const id = idMatch[1];
-                    const size = type === 'thumb' ? 'm' : 'l'; // m=320px, l=640px
-                    return `https://i.imgur.com/${id}${size}.jpg`;
-                }
-                // 尝试直接匹配 i.imgur.com/xxxxx.jpg 格式
-                const directMatch = url.match(/i\.imgur\.com\/([a-zA-Z0-9]+)(\.[a-zA-Z]+)(?:\?.*)?$/);
-                if (directMatch) {
-                    const size = type === 'thumb' ? 'm' : 'l';
-                    const ext = directMatch[2] || '.jpg';
-                    return `https://i.imgur.com/${directMatch[1]}${size}${ext}`;
-                }
+            if (type === 'thumb') {
+                // 缩略图：用代理压缩到 400px，WebP格式，高质量
+                return `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=400&output=webp&q=75`;
+            } else {
+                // 详情预览图：用代理压缩到 800px，WebP格式
+                return `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=800&output=webp&q=85`;
             }
-            
-            // 2. ImgBB - 尝试添加缩略图参数
-            if (url.includes('ibb.co') || url.includes('imgbb.com')) {
-                // ImgBB 的缩略图格式: 在URL后加 .th 或改变域名
-                if (type === 'thumb' && url.includes('i.ibb.co')) {
-                    return url.replace('i.ibb.co', 'thumbs2.imgbb.com');
-                }
-                return url;
-            }
-            
-            // 3. Postimg - 支持缩略图
-            if (url.includes('postimg.cc') || url.includes('postimage.cc') || url.includes('i.postimg.cc')) {
-                if (type === 'thumb') {
-                    return url.replace('i.postimg.cc', 'postimg.cc').replace('/images/', '/thumbs/');
-                }
-                return url;
-            }
-            
-            // 4. GitHub raw - 使用GitHub的CDN缓存但原图
-            if (url.includes('raw.githubusercontent.com')) {
-                return url;
-            }
-            
-            // 5. 其他图床返回原图
-            return url;
+        }
+
+        // 获取原始URL用于下载
+        function getOriginalUrl(url) {
+            return url; // 下载始终用原图
         }
 
         function renderDisplay() {
@@ -324,7 +292,7 @@
             const wallpaper = wallpapers.find(w => w.id === id);
             if (!wallpaper) return;
             currentWallpaper = wallpaper;
-            // 详情页使用中等尺寸图片（l=640px, 约200-400KB）
+            // 详情页使用中等尺寸图片
             const detailUrl = getOptimizedUrl(wallpaper.url, 'detail');
             document.getElementById('detailImage').src = detailUrl;
             document.getElementById('detailTitle').textContent = wallpaper.text;
@@ -358,7 +326,7 @@
             });
             
             const a = document.createElement('a');
-            a.href = currentWallpaper.url;
+            a.href = getOriginalUrl(currentWallpaper.url);
             a.download = `蓝希_${currentWallpaper.text}.jpg`;
             a.click();
         }
